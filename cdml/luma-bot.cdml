@@ -1,0 +1,465 @@
+bot:
+  format: chat
+  facebook_menu:
+    - type: postback
+      text: "I need ideas \U0001F4A1"
+      payload: 'I Need Ideas:*'
+    - type: postback
+      text: "Talk to support \U0001F468‍\U0001F527 "
+      payload: 'Human Handoff:*'
+    - type: postback
+      text: "Check my order \U0001F4E6"
+      payload: 'Order Check:*'
+  flows:
+    - name: Email Capture
+      flow_elements:
+        - message_thread:
+            name: InitialSetUp
+            messages:
+              - user_input_group:
+                  require_confirmation: true
+                  items:
+                    - email:
+                        slot_name: Email
+                        label: Email
+                        prompt: Great! What's your email address?
+            continue_to: 'Email Capture:NotifyAEP UserIdentified'
+        - code:
+            name: NotifyAEP UserIdentified
+            handler: notifyAEPOfUserIdentified
+            continue_to: 'Email Capture:Post Capture Thanks'
+        - message_thread:
+            name: Post Capture Thanks
+            messages:
+              - text:
+                  text: 'Thanks ${FirstName}!'
+            continue_to: 'I Need Ideas:Incoming Post Email Capture'
+        - message_thread:
+            name: Privacy Policy
+            messages:
+              - text:
+                  text: "Before we dive in, a quick bit of house keeping \U0001F3E0\U0001F447"
+              - text:
+                  text: 'Our policies, terms, and legal stuff can be viewed here: https://public.aepdemo.net/privacy.html'
+            quick_nav:
+              prompt: Are you happy to swing me your email so I can provide you with personalised recommendations?
+              choices:
+                - display_name: "Yes \U0001F44D"
+                  continue_to: 'Email Capture:InitialSetUp'
+                - display_name: "No \U0001F44E"
+                  continue_to: 'Email Capture:Email Disagree'
+        - message_thread:
+            name: Email Disagree
+            quick_nav:
+              prompt: >-
+                That's fine. You can still browse the products in our store, but you won't get any discounts, promotions
+                or recommendations.
+              choices:
+                - display_name: "\U0001F914 hmm, on second thoughts"
+                  continue_to: 'Email Capture:Privacy Policy'
+                - display_name: ⭐ Let's go shopping!
+                  continue_to: 'I Need Ideas:Incoming Post Email Capture'
+        - branch:
+            name: Check for email
+            entry_element: true
+            match: 'Email Capture:Privacy Policy'
+            no_match: 'I Need Ideas:Incoming Post Email Capture'
+            and_conditions:
+              - lhs: '${Email}'
+                op: is_unknown
+    - name: ResetFlow
+      keywords:
+        - regex_(\\|/)forgetMe
+        - regex_(\\|/)reset
+        - regex_(\\|/)restart
+        - regex_(\\|/)cancel
+      flow_elements:
+        - action_sequence:
+            name: ResetSequence
+            entry_element: true
+            actions:
+              - clear_slots:
+                  name: Clear Values
+                  slots:
+                    - Email
+                    - viewed_products
+                    - FirstName
+                    - OrderId
+                    - NpsScore
+                    - NpsFeedback
+                    - NPSFeedbackText
+            continue_to: 'Welcome:*'
+    - name: Order Check
+      flow_elements:
+        - message_thread:
+            name: Ask for Order Id
+            entry_element: true
+            messages:
+              - text:
+                  text: 'No problem, I can help with that.'
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - text:
+                        slot_name: OrderId
+                        label: OrderId
+                        prompt: Can you please provide the order id that you'd like help with?
+              - text:
+                  text: Thanks! Please hold tight while I check that order for you.
+              - text:
+                  text: "\U0001F914 hmm, I can't find any order matching that id. "
+            continue_to: 'FollowUp:*'
+    - name: NPS
+      keywords:
+        - exact_NPS
+      flow_elements:
+        - message_thread:
+            name: NPS Question 1
+            messages:
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - multiple_choice:
+                        slot_name: NpsScore
+                        label: NpsScore
+                        prompt: 'Overall, how would you rate your chat experience?'
+                        choices:
+                          - display_name: "\U0001F620 Bad"
+                            response_val: ''
+                          - display_name: "\U0001F641 Poor"
+                            response_val: ''
+                          - display_name: "\U0001F610 Average"
+                            response_val: ''
+                          - display_name: "\U0001F642 Good"
+                            response_val: ''
+                          - display_name: "\U0001F604 Great"
+                            response_val: ''
+            continue_to: 'NPS:Second Question Branch'
+        - branch:
+            name: Second Question Branch
+            match: 'NPS:Ask Second Question'
+            no_match: 'NPS:Happy User Additional Feedback'
+            or_conditions:
+              - lhs: '${NpsScore}'
+                op: is
+                rhs: "\U0001F620 Bad"
+              - lhs: '${NpsScore}'
+                op: is
+                rhs: "\U0001F641 Poor"
+              - lhs: '${NpsScore}'
+                op: is
+                rhs: "\U0001F610 Average"
+        - message_thread:
+            name: Ask Second Question
+            messages:
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - multiple_choice:
+                        slot_name: NpsFeedback
+                        label: NpsFeedback
+                        prompt: What problem did you experience in the chat?
+                        choices:
+                          - display_name: Unhelpful responses
+                            response_val: ''
+                          - display_name: Too many messages
+                            response_val: ''
+                          - display_name: Technical issues
+                            response_val: ''
+                          - display_name: Bot didn't get me
+                            response_val: ''
+                          - display_name: Something else
+                            response_val: ''
+            continue_to: 'NPS:Other Feedback Branch'
+        - message_thread:
+            name: Thanks for Participating
+            messages:
+              - text:
+                  text: Thanks for providing your feedback! We'll use it to improve our chat experience.
+            continue_to: 'FollowUp:*'
+        - branch:
+            name: Other Feedback Branch
+            match: 'NPS:Unhappy User Other Feedback'
+            no_match: 'NPS:Unhappy User Additional Feedback'
+            and_conditions:
+              - lhs: '${NpsFeedback}'
+                op: is
+                rhs: Something else
+        - message_thread:
+            name: Happy User Additional Feedback
+            quick_nav:
+              prompt: Thanks for the high score! Can you please let us know what you liked?
+              choices:
+                - display_name: Happy to!
+                  continue_to: 'NPS:Happy User Feedback Gatherer'
+                - display_name: I'll pass
+                  continue_to: 'NPS:Thanks for Participating'
+        - message_thread:
+            name: Happy User Feedback Gatherer
+            messages:
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - text:
+                        slot_name: NPSFeedbackText
+                        label: NPSFeedbackText
+                        prompt: Thanks! What did you think of your experience?
+            continue_to: 'NPS:Thanks for Participating'
+        - message_thread:
+            name: Unhappy User Other Feedback
+            messages:
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - text:
+                        slot_name: NPSFeedbackText
+                        label: NPSFeedbackText
+                        prompt: Please let us know what problem or problems you had with the chat.
+            continue_to: 'NPS:Thanks for Participating'
+        - branch:
+            name: Feedback Received Checker
+            match: 'NPS:Already Responded Question'
+            no_match: 'NPS:NPS Question 1'
+            and_conditions:
+              - lhs: '${NpsScore}'
+                op: is_not_empty
+        - message_thread:
+            name: NPS Intro
+            messages:
+              - text:
+                  text: Thanks for chatting with me!
+            continue_to: 'NPS:NPS Question 1'
+        - message_thread:
+            name: Already Responded Question
+            messages:
+              - text:
+                  text: 'I see that you''ve already answered our survey. '
+            quick_nav:
+              prompt: Would you like to change or add to your previous responses?
+              choices:
+                - display_name: Yes
+                  continue_to: 'NPS:Previous Feedback Clearer'
+                - display_name: No thanks!
+                  continue_to: 'FollowUp:FollowUp'
+        - action_sequence:
+            name: Previous Feedback Clearer
+            actions:
+              - clear_slots:
+                  name: Clear Values
+                  slots:
+                    - NpsScore
+                    - NpsFeedback
+                    - NPSFeedbackText
+            continue_to: 'NPS:NPS Question 1'
+        - message_thread:
+            name: Unhappy User Additional Feedback
+            quick_nav:
+              prompt: Can you please tell us how we can do better?
+              choices:
+                - display_name: Sure
+                  continue_to: 'NPS:Additional Feedback Collector'
+                - display_name: Skip it
+                  continue_to: 'NPS:Thanks for Participating'
+        - message_thread:
+            name: Additional Feedback Collector
+            messages:
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - text:
+                        slot_name: NPSFeedbackText
+                        label: NPSFeedbackText
+                        prompt: Great! What can we improve?
+            continue_to: 'NPS:Thanks for Participating'
+        - message_thread:
+            name: NPS Solicitor
+            entry_element: true
+            quick_nav:
+              prompt: Would you mind giving us feedback on your chat experience so far?
+              choices:
+                - display_name: "Sure! \U0001F44D"
+                  continue_to: 'NPS:Feedback Received Checker'
+                - display_name: No thanks ❌
+                  continue_to: 'FollowUp:*'
+    - name: NPS Reset
+      keywords:
+        - exact_NPS reset
+      flow_elements:
+        - action_sequence:
+            name: NPS Slot Resetter
+            entry_element: true
+            actions:
+              - clear_slots:
+                  name: Clear Values
+                  slots:
+                    - NpsScore
+                    - NpsFeedback
+                    - NPSFeedbackText
+            continue_to: 'NPS:*'
+    - name: FollowUp
+      flow_elements:
+        - message_thread:
+            name: FollowUp
+            entry_element: true
+            quick_nav:
+              prompt: What can I help you with?
+              choices:
+                - display_name: "I need ideas \U0001F4A1"
+                  continue_to: 'I Need Ideas:*'
+                - display_name: I’ve got a question ☝️
+                  continue_to: 'FollowUp:Ive got a question'
+                - display_name: "Talk to support \U0001F468‍\U0001F527 "
+                  continue_to: 'Human Handoff:*'
+                - display_name: "Check my order \U0001F4E6"
+                  continue_to: 'Order Check:*'
+                - display_name: Stay connected ✉️
+                  continue_to: 'Newsletter Signup:*'
+        - message_thread:
+            name: Ive got a question
+            messages:
+              - text:
+                  text: "No worries! You can type or use your voice to ask me a question. \U0001F642"
+              - text:
+                  text: 'What can I help you with? '
+    - name: Welcome
+      keywords:
+        - exact_hi
+        - "exact_Let's go! \U0001F680"
+        - exact_Yes please!
+      entry_flow: true
+      flow_elements:
+        - message_thread:
+            name: Greeting
+            messages:
+              - text:
+                  text: "Hi ${FirstName}! I'm Luma Bot \U0001F916 Your go-to guide for all things Luma. "
+            continue_to: 'FollowUp:*'
+        - branch:
+            name: Check for Facebook Metadata
+            match: 'Welcome:populate FirstName'
+            no_match: 'Welcome:Capture Name'
+            and_conditions:
+              - lhs: '${meta.givenName}'
+                op: is_not_empty
+              - lhs: '${FirstName}'
+                op: is_unknown
+        - code:
+            name: Check for Website Metadata
+            entry_element: true
+            handler: extractMetadaAndPopulateSlots
+            continue_to: 'Welcome:Check for Facebook Metadata'
+        - action_sequence:
+            name: populate FirstName
+            actions:
+              - set_slots:
+                  name: Set Values
+                  slots:
+                    FirstName: '${meta.givenName}'
+            continue_to: 'Welcome:Greeting'
+        - message_thread:
+            name: Capture Name
+            messages:
+              - text:
+                  text: "Hello! I'm Luma Bot \U0001F916 Your go-to guide for all things Luma. "
+              - user_input_group:
+                  require_confirmation: false
+                  items:
+                    - text:
+                        slot_name: FirstName
+                        label: FirstName
+                        prompt: What should I call you?
+              - text:
+                  text: 'Let''s get started, ${FirstName}! '
+            continue_to: 'FollowUp:*'
+    - name: Human Handoff
+      flow_elements:
+        - handoff:
+            name: Handoff
+            entry_element: true
+            user_message: 'Sure, please wait a minute while I find a staff member to assist you.'
+            target_business_system: sc-live-chat
+    - name: I Need Ideas
+      keywords:
+        - regex_(\\|/)getEvents
+      flow_elements:
+        - message_thread:
+            name: I need ideas onboarding
+            entry_element: true
+            messages:
+              - text:
+                  text: 'Too easy! I can help you with that. '
+            continue_to: 'Email Capture:*'
+        - code:
+            name: getRecentlyViewedProducts
+            handler: getRecentlyViewedProducts
+            continue_to: 'I Need Ideas:Recommend if Viewed Products'
+        - branch:
+            name: Recommend if Viewed Products
+            match: 'I Need Ideas:Recently Viewed Followup'
+            no_match: 'I Need Ideas:Get Products Callout'
+            and_conditions:
+              - lhs: '${viewed_products}'
+                op: is_not_empty
+        - code:
+            name: getProducts
+            handler: getProducts
+            continue_to: 'I Need Ideas:NPS Check'
+        - message_thread:
+            name: Recently Viewed Followup
+            quick_nav:
+              prompt: I just noticed that you've already taken an interest in these products.
+              choices:
+                - display_name: "More like these \U0001F6CD️"
+                  continue_to: 'I Need Ideas:Hold tight'
+                - display_name: "Browse catalog \U0001F6D2"
+                  continue_to: 'I Need Ideas:Hold tight'
+        - message_thread:
+            name: Hold tight
+            messages:
+              - text:
+                  text: "Good choice! Please hold tight while I track down a few options for you from our latest product catalogue \U0001F60E"
+            continue_to: 'I Need Ideas:getProducts'
+        - message_thread:
+            name: Incoming Post Email Capture
+            messages:
+              - text:
+                  text: "Give me a moment while I track down some goodies for you \U0001F45C ✨ \U0001F3EA"
+            continue_to: 'I Need Ideas:getRecentlyViewedProducts'
+        - message_thread:
+            name: Get Products Callout
+            messages:
+              - text:
+                  text: Here are the latest and greatest products from our premium catalogue!
+            continue_to: 'I Need Ideas:getProducts'
+        - branch:
+            name: NPS Check
+            match: 'NPS:*'
+            no_match: 'FollowUp:*'
+            and_conditions:
+              - lhs: '${NpsScore}'
+                op: is_unknown
+    - name: Newsletter Signup
+      flow_elements:
+        - message_thread:
+            name: Signup
+            entry_element: true
+            quick_nav:
+              prompt: 'Want behind the scenes access to campaigns, collaborations, new products and sales?'
+              choices:
+                - display_name: "Sign me up! \U0001F680"
+                  continue_to: 'Newsletter Signup:Check for email'
+                - display_name: "Not today \U0001F648"
+                  continue_to: 'FollowUp:*'
+        - branch:
+            name: Check for email
+            match: 'Newsletter Signup:Confirm email'
+            no_match: 'Email Capture:*'
+            and_conditions:
+              - lhs: '${Email}'
+                op: is_not_empty
+        - message_thread:
+            name: Confirm email
+            messages:
+              - text:
+                  text: 'Great! I already have your email, ${FirstName}. Keep an eye on your inbox for special member offers.'
+            continue_to: 'FollowUp:*'
