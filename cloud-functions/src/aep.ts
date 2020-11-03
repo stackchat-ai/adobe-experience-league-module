@@ -1,6 +1,6 @@
 import * as dc from "@stackchat/dynamic-content-toolkit";
+import { carouselWithCards, clearSlots, getChannelIdentifier, messageCard, noUnderscoreTenantId, reverseTimeSort, setSlot, soloMessage, underscoreTenantId } from "./util";
 import { BRAND_ID, BRAND_NAME, CUSTOM_EVENT_DATASET_ID, CUSTOM_EVENT_ORCHESTRATION_EVENT_ID, CUSTOM_EVENT_SCHEMA_ID, CUSTOM_EVENT_SCHEMA_VERSION } from "./_constants";
-import { carouselWithCards, getChannelIdentifier, messageCard, setSlot, clearSlots, soloMessage, reverseTimeSort } from "./util";
 
 
 ///////////////////////////////////////////
@@ -131,7 +131,7 @@ export async function getRecentlyViewedProducts(
     );
   }
   const viewedProducts = experienceEvents.filter((e: any) => {
-    return e.entity?.[aepConfig.tenantId]?.productData?.productInteraction === "productView"
+    return e.entity?.[underscoreTenantId(aepConfig.tenantId)]?.productData?.productInteraction === "productView"
   })
     .sort(reverseTimeSort)
     .map((e: any) => {
@@ -220,7 +220,7 @@ function generateProductViewEntity(input: {
     ]
   };
 
-  (entity as any)[aepConfig.tenantId] = {
+  (entity as any)[underscoreTenantId(aepConfig.tenantId)] = {
     brand: {
       tms: 'Launch',
       brandName: BRAND_NAME
@@ -241,10 +241,10 @@ function generateProductViewEntity(input: {
   } as EventPayload;
 
   if (userEmail) {
-    (entity as any)[aepConfig.tenantId].identification.emailId = userEmail;
+    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.emailId = userEmail;
   }
   if (ecid) {
-    (entity as any)[aepConfig.tenantId].identification.ecid = ecid;
+    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.ecid = ecid;
   }
 
   return entity as FullProductViewXdmEntity;
@@ -261,7 +261,7 @@ function generateUserIdentifiedEntity(
     timestamp: toAEPDateString(new Date()),
   };
 
-  (entity as any)[aepConfig.tenantId] = {
+  (entity as any)[underscoreTenantId(aepConfig.tenantId)] = {
     brand: {
       tms: 'Launch',
       brandName: BRAND_NAME
@@ -272,10 +272,10 @@ function generateUserIdentifiedEntity(
   } as EventPayload;
 
   if (userEmail) {
-    (entity as any)[aepConfig.tenantId].identification.emailId = userEmail;
+    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.emailId = userEmail;
   }
   if (ecid) {
-    (entity as any)[aepConfig.tenantId].identification.ecid = ecid;
+    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.ecid = ecid;
   }
 
   return entity;
@@ -363,10 +363,7 @@ function generatePostBodyForXdmEntity(
   aepConfig: AepNativeIntegrationCtx,
   data: XdmEntity
 ): Record<string, any> {
-  const schemaTenantId = aepConfig.tenantId.startsWith('_')
-    ? aepConfig.tenantId.substring(1)
-    : aepConfig.tenantId
-    ;
+  const schemaTenantId = noUnderscoreTenantId(aepConfig.tenantId);
   return {
     header: {
       schemaRef: {
@@ -391,10 +388,9 @@ function generatePostBodyForXdmEntity(
   };
 }
 
-/** Generates an ISO-8601-without-the-milliseconds string */
 function toAEPDateString(date: Date): string {
-  // e.g. "2020-06-09T13:04:55Z"
-  return date.toISOString().split('.')[0] + 'Z';
+  // e.g. "2020-06-09T13:04:55.123Z"
+  return date.toISOString();
 }
 
 /** Adapts the native AEP integration context into something a bit more ergonomic */

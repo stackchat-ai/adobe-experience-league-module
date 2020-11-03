@@ -72,3 +72,17 @@ export function reverseTimeSort(a: any, b: any): number {
       : 0
     ;
 }
+
+export function noUnderscoreTenantId(tenantId: string): string {
+  return tenantId.startsWith('_')
+    ? tenantId.substring(1)
+    : tenantId
+    ;
+}
+
+export function underscoreTenantId(tenantId: string): string {
+  return tenantId.startsWith('_')
+    ? tenantId
+    : "_" + tenantId
+    ;
+}
