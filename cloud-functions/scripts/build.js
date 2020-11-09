@@ -12,9 +12,6 @@ const buildPath = './build'
 const prettierOpts = prettier.resolveConfig.sync('.prettierrc.json');
 
 try {
-  fs.rmdirSync(distPath, { recursive: true })
-  fs.rmdirSync(buildPath, { recursive: true })
-
   let output = ''
   fs.mkdirSync(distPath)
   const files = fs.readdirSync(buildPath)
