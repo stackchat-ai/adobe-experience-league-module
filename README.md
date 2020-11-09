@@ -13,9 +13,7 @@ In this module, you'll build your own Luma chatbot using Stackchat. This module 
 - Configure social channels so you can interact with your chatbot via Facebook and WeChat
 - Integrate your chatbot with Adobe Experience Platform and other Experience Cloud products
 
-As part of this module you'll setup a bi-direction integration between Stackchat and Adobe Experience Platform, allowing your chatbot to both send interaction data to Adobe Experience Platform and also, have Stackchat consume the Real-time Customer Profile via Adobe Experience Platform API's to help inform and personalize the conversation across web and social. To illustrate the end result, please check out the following video:
-
->[!VIDEO](https://video.tv.adobe.com/v/35846?quality=12&learn=on)
+As part of this module you'll setup a bi-direction integration between Stackchat and Adobe Experience Platform, allowing your chatbot to both send interaction data to Adobe Experience Platform and also, have Stackchat consume the Real-time Customer Profile via Adobe Experience Platform API's to help inform and personalize the conversation across web and social. To illustrate the end result, please check out the [following video](https://video.tv.adobe.com/v/35846?quality=12&learn=on).
 
 ## An introduction to Stackchat
 
