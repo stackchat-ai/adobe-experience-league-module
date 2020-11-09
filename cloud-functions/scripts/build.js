@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable security/detect-non-literal-fs-filename */
 const fs = require('fs')
+const prettier = require('prettier')
 
 /**
  * Port of the following npm build script to Node so that it runs on both Windows and Mac
@@ -8,6 +9,7 @@ const fs = require('fs')
  */
 const distPath = './dist'
 const buildPath = './build'
+const prettierOpts = prettier.resolveConfig.sync('.prettierrc.json');
 
 try {
   let output = ''
@@ -16,7 +18,10 @@ try {
   files.forEach(file => {
     output += fs.readFileSync(`${buildPath}/${file}`)
   });
-  fs.writeFileSync(`${buildPath}/_filtered-output.js`, output.replace(/^import .*/gm, ''))
+
+  output = output.replace(/^import .*/gm, '') //remove import statements
+  const formattedString = prettier.format(output, prettierOpts || {})
+  fs.writeFileSync(`${distPath}/cloud-functions.js`, formattedString)
 } catch (err) {
   console.error(`There was an error! ${err}`)
 }
