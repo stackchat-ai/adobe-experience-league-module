@@ -27,7 +27,7 @@
     "webpack-cli": "3.3.12"
   },
   "scripts": {
-    "clean": "rm -rf build dist",
+    "clean": "node ./scripts/clean.js",
     "build": "npm run clean && tsc && node ./scripts/build.js",
     "old-build": "npm run clean && tsc && npm run concat",
     "concat": "mkdir -p dist && cat build/* > build/_output.js && cat build/_output.js | grep -v '^\\(import \\)' > build/_filtered-output.js && prettier build/_filtered-output.js > dist/cloud-functions.js",
