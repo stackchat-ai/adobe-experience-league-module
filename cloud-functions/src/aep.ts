@@ -183,30 +183,22 @@ function generateProductViewEntity(input: {
   aepConfig: AepNativeIntegrationCtx;
   cid: string;
 }): FullProductViewXdmEntity {
-  const {
-    userId,
-    userEmail,
-    userName,
-    ecid,
-    product,
-    aepConfig,
-    cid
-  } = input;
-
-  const entity = {
+  const { userId, userEmail, ecid, product, aepConfig, cid } = input;
+  const entity: Record<string, any> = {
     _id: `${ Date.now() }.${ Math.floor(Math.random() * 1e5) }`,
     timestamp: toAEPDateString(new Date()),
+    eventType: "commerce.productViews",
     commerce: {
       productViews: {
-        value: 1
-      }
+        value: 1,
+      },
     },
     _experience: {
       campaign: {
         orchestration: {
-          eventID: CUSTOM_EVENT_ORCHESTRATION_EVENT_ID
-        }
-      }
+          eventID: CUSTOM_EVENT_ORCHESTRATION_EVENT_ID,
+        },
+      },
     },
     productListItems: [
       {
@@ -215,38 +207,35 @@ function generateProductViewEntity(input: {
         quantity: 1,
         name: product.name,
         product: product.imageUrl,
-        productAddMethod: cid
-      }
-    ]
+        productAddMethod: cid,
+      },
+    ],
   };
-
-  (entity as any)[underscoreTenantId(aepConfig.tenantId)] = {
-    brand: {
-      tms: 'Launch',
-      brandName: BRAND_NAME
+  entity["productListItems"][0][underscoreTenantId(aepConfig.tenantId)] = {
+    core: {
+      productURL: product.pageUrl,
+      imageURL: product.imageUrl,
     },
-    chatbot: {
-      channel: cid,
-      socialMediaFirstName: userName
-    },
-    productData: {
-      productPageUrl: product.pageUrl,
-      productUrl: product.imageUrl,
-      productName: product.name,
-      productInteraction: 'productView'
+  };
+  entity[underscoreTenantId(aepConfig.tenantId)] = {
+    demoEnvironment: {
+      tms: "Launch",
+      brandName: BRAND_NAME,
     },
     identification: {
-      stackchatId: userId
-    }
-  } as EventPayload;
-
+      core: {
+        stackchatId: userId,
+      },
+    },
+  };
   if (userEmail) {
-    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.emailId = userEmail;
+    entity[
+      underscoreTenantId(aepConfig.tenantId)
+    ].identification.core.email = userEmail;
   }
   if (ecid) {
-    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.ecid = ecid;
+    entity[underscoreTenantId(aepConfig.tenantId)].identification.core.ecid = ecid;
   }
-
   return entity as FullProductViewXdmEntity;
 }
 
@@ -256,29 +245,30 @@ function generateUserIdentifiedEntity(
   ecid: string,
   aepConfig: AepNativeIntegrationCtx
 ): UserIdentifiedXdmEntity {
-  const entity = {
+  const entity: Record<string, any> = {
     _id: `${ Date.now() }.${ Math.floor(Math.random() * 1e5) }`,
     timestamp: toAEPDateString(new Date()),
   };
-
-  (entity as any)[underscoreTenantId(aepConfig.tenantId)] = {
-    brand: {
-      tms: 'Launch',
-      brandName: BRAND_NAME
+  entity[underscoreTenantId(aepConfig.tenantId)] = {
+    demoEnvironment: {
+      tms: "Launch",
+      brandName: BRAND_NAME,
     },
     identification: {
-      stackchatId: userId
-    }
-  } as EventPayload;
-
+      core: {
+        stackchatId: userId,
+      }
+    },
+  };
   if (userEmail) {
-    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.emailId = userEmail;
+    entity[
+      underscoreTenantId(aepConfig.tenantId)
+    ].identification.core.email = userEmail;
   }
   if (ecid) {
-    (entity as any)[underscoreTenantId(aepConfig.tenantId)].identification.ecid = ecid;
+    entity[underscoreTenantId(aepConfig.tenantId)].identification.core.ecid = ecid;
   }
-
-  return entity;
+  return entity as UserIdentifiedXdmEntity;
 }
 
 async function getExperienceEventsForUser(
